@@ -1,0 +1,5 @@
+NAME="kids.data"
+DESCRIPTION="Kids data manipulation helpers."
+EMAIL="valentin.lab@kalysto.org"
+AUTHOR="Valentin LAB"
+AUTHOR_EMAIL="$AUTHOR <$EMAIL>"
