@@ -34,11 +34,11 @@ def classify(values, sep_fun, deep=-1):
 
 
     >>> def sep_fun(value):
-    ...     primes = [v for v in [2,3,5,7] if value % v == 0]
+    ...     primes = [v for v in [2, 3, 5, 7] if value % v == 0]
     ...     if len(primes) == 0:
     ...         return None, value, True
     ...     tailv = value / primes[0]
-    ...     return primes[0], tailv, tailv == 1
+    ...     return primes[0], int(tailv), tailv == 1
     >>> classify([6, 9, 15, 20, 32], sep_fun)
     {2: {2: {2: {2: {2: 1}}, 5: 1}, 3: 1}, 3: {3: 1, 5: 1}}
 
@@ -167,9 +167,6 @@ def inflate_dict(dct, sep=".", deep=-1, strip=True):
 
     """
 
-    def strip(val):
-        return val.strip() if strip else val
-
     def mset(dct, k, v, sep=".", deep=-1):
         if deep == 0 or sep not in k:
             dct[k] = v
@@ -192,10 +189,26 @@ def inflate_dict(dct, sep=".", deep=-1, strip=True):
 
 
 def flatten(dct, sep=".", deep=-1):
+    """Flattens a recursive dict
+
+    This will create a flat dict (with no subdict) from dict structure::
+
+        >>> import pprint
+        >>> pprint.pprint(flatten({'a': {'b': 1, 'c': 2}, 'd': 3}))
+        {'a.b': 1, 'a.c': 2, 'd': 3}
+
+    With the ``deep`` argument, you can stop the flattening to a
+    specified deepness::
+
+        >>> pprint.pprint(flatten({'a': {'b': 1, 'c': {'x': 9}}, 'd': 3},
+        ...               deep=1))
+        {'a.b': 1, 'a.c': {'x': 9}, 'd': 3}
+
+    """
     res = {}
-    for k, v in dct.iteritems():
+    for k, v in dct.items():
         if isinstance(v, dict) and (deep > 0 or deep == -1):
-            for k2, v2 in flatten(v, sep, deep - 1).iteritems():
+            for k2, v2 in flatten(v, sep, deep - 1).items():
                 res["%s%s%s" % (k, sep, k2)] = v2
         else:
             res[k] = v

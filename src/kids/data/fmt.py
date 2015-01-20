@@ -8,6 +8,23 @@ from .format import LogNumberFormatter, mk_fmt
 from .lib import partition
 
 
+## Python 3 compatibility layer
+try:
+    unicode = unicode
+except NameError:  ## pragma: no cover
+    # 'unicode' is undefined, must be Python 3
+    str = str
+    unicode = str
+    bytes = bytes
+    basestring = (str,bytes)
+else:  ## pragma: no cover
+    # 'unicode' exists, must be Python 2
+    str = str
+    unicode = unicode
+    bytes = str
+    basestring = basestring
+
+
 size = LogNumberFormatter(
     units=([u"B", u"KiB", u"MiB", u"GiB", u"TiB",
             "PiB", "EiB", "ZiB", "YiB"], 2**10)
@@ -17,7 +34,6 @@ size = LogNumberFormatter(
 cond = lambda predicate, fmt_true, fmt_false: mk_fmt(
     lambda v, c: fmt_true(v, c) if predicate(v, c) else fmt_false(v, c)
     )(predicate=predicate, fmt_true=fmt_true, fmt_false=fmt_false)
-
 
 
 fun_id = unicode
@@ -63,6 +79,25 @@ def records(elts, fields=None, group_by=[], order_by=[], indent="",
     ------
         24
 
+    # >>> elts = [{"foo": 1,  "bar": 'x'},
+    # ...         {"foo": 23, "bar": 'abc'},
+    # ...         {"foo": 7,  "bar": 'x'}]
+    # >>> print(records(elts, fields=['foo', 'bar'],
+    # ...       group_by=['bar', 'foo'],
+    # ...       totals={'foo': sum}))
+    # foo: 1
+    #   bar: x
+    #     1 x
+    #     ---
+    #     1
+    # foo: 23
+    #   bar: abc
+    #     23 abc
+    #     ------
+    #     23
+    #   --------
+    #     23
+        
     """
     if fields is None and len(elts) > 0:
         fields = elts[0].keys()
@@ -79,7 +114,7 @@ def records(elts, fields=None, group_by=[], order_by=[], indent="",
                          order_by=order_by, indent=indent + "  ",
                          field_fmts=field_fmts, type_fmts=type_fmts,
                          totals=totals))
-                  for value, subelts in parted.iteritems())
+                  for value, subelts in parted.items())
 
     ## get max length:
     fmt_field = lambda f, v: "" if v is False else \

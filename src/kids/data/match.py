@@ -5,16 +5,16 @@ import kids.cache
 
 try:
     import distance
-except ImportError:
+except ImportError:  ## pragma: no cover
     distance = None
 
 ##
 ## Criterias
 ##
 
-if distance:
+if distance:  ## pragma: no cover
     levenstein = lambda a, b: 1 - distance.nlevenshtein(a, b)
-else:
+else:  ## pragma: no cover
     def levenstein(a, b):
         raise Exception(
             "'levenstein' function needs python module 'distance' "
@@ -97,6 +97,12 @@ def first_match(elt, targets, criteria):
         ...    criteria=avg([levenstein, size, equal]))
         'foo'
 
+    If no element matches, it should return False::
+
+        >>> first_match("foo", ["bar", "barb", "fooz", "zob"],
+        ...    criteria=equal)
+        False
+
     """
     for target in targets:
         if match(elt, target, criteria) == 1:
@@ -121,5 +127,5 @@ def close_matches(elt, targets, criteria, min_ratio=0.):
     candidates = [(target, ratio)
                   for target, ratio in candidates
                   if ratio > min_ratio]
-    candidates.sort(key=lambda (target, ratio): ratio, reverse=True)
+    candidates.sort(key=lambda tr: tr[1], reverse=True)
     return candidates

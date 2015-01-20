@@ -11,6 +11,23 @@ import datetime
 import sact.epoch
 
 
+## Python 3 compatibility layer
+try:
+    unicode = unicode
+except NameError:  ## pragma: no cover
+    # 'unicode' is undefined, must be Python 3
+    str = str
+    unicode = str
+    bytes = bytes
+    basestring = (str,bytes)
+else:  ## pragma: no cover
+    # 'unicode' exists, must be Python 2
+    str = str
+    unicode = unicode
+    bytes = str
+    basestring = basestring
+
+
 class Formatter(object):
     r"""Generic formatter factory.
 
@@ -19,9 +36,9 @@ class Formatter(object):
 
     context is optional.
 
+      >>> from __future__ import print_function
       >>> f = Formatter()
-      >>> f('hello')
-      u'hello'
+      >>> assert f('hello') == 'hello'
 
     Context at init time
     --------------------
@@ -73,8 +90,7 @@ class Formatter(object):
 
     You can provide a context at call-time
       >>> fmt = Formatter()
-      >>> fmt('hello', data='bar')
-      u'hello'
+      >>> assert fmt('hello', data='bar') == 'hello'
 
     Context can be explicitly named and set:
 
@@ -83,14 +99,14 @@ class Formatter(object):
 
     Then set
 
-      >>> print fmt('hop', context={'data': 'bar2'})
+      >>> print(fmt('hop', context={'data': 'bar2'}))
       value: hop
       context:
       {'_': <function ... at ...>,
       'data': 'bar2',
       'gettextargs': {},
       'ginko': 'biloba',
-      'trans': <function trans at ...>}
+      'trans': <function ...trans at ...>}
 
 
     Support of old API:
@@ -103,7 +119,7 @@ class Formatter(object):
 
       >>> fmt = MyFormatter()
 
-      >>> print fmt('hop')
+      >>> print(fmt('hop'))
       hop
 
     """
@@ -169,7 +185,7 @@ class Formatter(object):
                     'Your context %r has no __setitem__ and thus '
                     'you cannot init your Formatter with named args.'
                     % context)
-            for key, value in kwargs.iteritems():
+            for key, value in kwargs.items():
                 context[key] = value
 
         return context
@@ -313,8 +329,7 @@ class TimeStampFormatter(Formatter):
 
     >>> format_timestamp = TimeStampFormatter()
 
-    >>> format_timestamp(1226929090)
-    u'2008-11-17 13:38:10'
+    >>> assert format_timestamp(1226929090) == '2008-11-17 13:38:10'
 
     timeframe usage
     ~~~~~~~~~~~~~~~
@@ -346,36 +361,27 @@ class TimeStampFormatter(Formatter):
     >>> w = (1226909090, 1226959090)
     >>> format_timestamp = TimeStampFormatter(structure=s,timeframe=w)
 
-    >>> format_timestamp(w[0])
-    u'08:04:50'
+    >>> assert format_timestamp(w[0]) == '08:04:50'
 
     which is the '(3, 5)' segment that matched best
 
-    >>> format_timestamp(w[1])
-    u'21:58:10'
-    >>> format_timestamp(1226919090)
-    u'10:51:30'
+    >>> assert format_timestamp(w[1]) == '21:58:10'
+    >>> assert format_timestamp(1226919090) == '10:51:30'
 
     >>> w=(120000000,1300000000)
     >>> format_timestamp = TimeStampFormatter(structure=s,timeframe=w)
 
-    >>> format_timestamp(w[0])
-    u'1973-10-20'
-    >>> format_timestamp(w[1])
-    u'2011-03-13'
-    >>> format_timestamp(1290000000)
-    u'2010-11-17'
+    >>> assert format_timestamp(w[0]) == '1973-10-20'
+    >>> assert format_timestamp(w[1]) == '2011-03-13'
+    >>> assert format_timestamp(1290000000) == '2010-11-17'
 
     >>> w=(123000000,124000000)
     >>> format_timestamp = TimeStampFormatter(structure=s,timeframe=w)
 
-    >>> format_timestamp(w[0])
-    u'11-24 14:40'
-    >>> format_timestamp(w[1])
-    u'12-06 04:26'
+    >>> assert format_timestamp(w[0]) == '11-24 14:40'
+    >>> assert format_timestamp(w[1]) == '12-06 04:26'
 
-    >>> format_timestamp(123500000)
-    u'11-30 09:33'
+    >>> assert format_timestamp(123500000) == '11-30 09:33'
 
     Exceptions
     ~~~~~~~~~~
@@ -494,6 +500,8 @@ class FancyNumberFormatter(Formatter):
 
     Sample::
 
+    >>> from __future__ import print_function
+
     >>> formatter = FancyNumberFormatter(structure=(
     ... #   limit    base  format
     ...    (10**3,     1, (u'< 1 ms'                , {} )),
@@ -535,7 +543,7 @@ class FancyNumberFormatter(Formatter):
 
     So:
 
-    >>> for i in range(10): print '%d => %s' % (i,formatter(i))
+    >>> for i in range(10): print('%d => %s' % (i,formatter(i)))
     0 => A
     1 => A
     2 => B
@@ -570,7 +578,7 @@ class FancyNumberFormatter(Formatter):
 
     So::
 
-    >>> for i in range(10): print '%d => %s' % (i,formatter(i))
+    >>> for i in range(10): print('%d => %s' % (i,formatter(i)))
     0 => 0 single
     1 => 1 single
     2 => 1 duo
@@ -600,7 +608,7 @@ class FancyNumberFormatter(Formatter):
 
     So::
 
-    >>> for i in range(10): print '%d => %s' % (i,formatter(i))
+    >>> for i in range(10): print('%d => %s' % (i,formatter(i)))
     0 => 0 single
     1 => 1 single
     2 => 1 duo 0 single
@@ -629,7 +637,7 @@ class FancyNumberFormatter(Formatter):
 
     So::
 
-    >>> for i in range(10): print '%d => %s' % (i,formatter(i))
+    >>> for i in range(10): print('%d => %s' % (i,formatter(i)))
     0 => 0 single
     1 => 1 single
     2 => 1 duo 0 single
@@ -655,39 +663,26 @@ class FancyNumberFormatter(Formatter):
     ... ))
 
 
-    >>> format_timedelta(2500 * 10**3 * 60 * 60 * 24)
-    u'2 d 12 h'
-
-    >>> format_timedelta(2500 * 10**3 * 60 * 60 * 24 * 10)
-    u'25 d 0 h'
-
-    >>> format_timedelta(2500)
-    u'2 ms'
-    >>> format_timedelta(2500 * 10**3)
-    u'2.5 s'
-    >>> format_timedelta(2500 * 10**3 * 60)
-    u'2 m 30 s'
-    >>> format_timedelta(2500 * 10**3 * 60 * 60)
-    u'2 h 30 m'
-
-    >>> format_timedelta(1226929090)
-    u'20 m 26 s'
-
-    >>> format_timedelta(800)
-    u'< 1 ms'
+    >>> assert format_timedelta(2500 * 10**3 * 60 * 60 * 24)      == '2 d 12 h'
+    >>> assert format_timedelta(2500 * 10**3 * 60 * 60 * 24 * 10) == '25 d 0 h'
+    >>> assert format_timedelta(2500)                   == '2 ms'
+    >>> assert format_timedelta(2500 * 10**3)           == '2.5 s'
+    >>> assert format_timedelta(2500 * 10**3 * 60)      == '2 m 30 s'
+    >>> assert format_timedelta(2500 * 10**3 * 60 * 60) == '2 h 30 m'
+    >>> assert format_timedelta(1226929090)             == '20 m 26 s'
+    >>> assert format_timedelta(800)                    == '< 1 ms'
 
     >>> format_timedelta = FancyNumberFormatter(structure=(
     ... #   limit    base  format
-    ...    (10**3,     1, (u'%(value)d microsecs',    {'value': 1})),
-    ...    (10**3, 10**3, (u'%(value)d ms'      ,     {'value': 1})),
-    ...    (60   , 10**3, (u'%(value).1f s'     ,     {'value': 1})),
-    ...    (60   ,     1, (u'%(value_1)d m %(value_2)d s'  , {'value_1': 60, 'value_2': 1})),
-    ...    (24   ,    60, (u'%(value_1)d h %(value_2)d m'  , {'value_1': 60, 'value_2': 1})),
-    ...    (None ,    60, (u'%(value_1)d d %(value_2)d h'  , {'value_1': 24, 'value_2': 1})),
+    ...    (10**3,     1, ('%(value)d microsecs',    {'value': 1})),
+    ...    (10**3, 10**3, ('%(value)d ms'      ,     {'value': 1})),
+    ...    (60   , 10**3, ('%(value).1f s'     ,     {'value': 1})),
+    ...    (60   ,     1, ('%(value_1)d m %(value_2)d s'  , {'value_1': 60, 'value_2': 1})),
+    ...    (24   ,    60, ('%(value_1)d h %(value_2)d m'  , {'value_1': 60, 'value_2': 1})),
+    ...    (None ,    60, ('%(value_1)d d %(value_2)d h'  , {'value_1': 24, 'value_2': 1})),
     ... ))
     ...
-    >>> format_timedelta(800)
-    u'800 microsecs'
+    >>> assert format_timedelta(800) == '800 microsecs'
 
     Float support
     -------------
@@ -697,18 +692,16 @@ class FancyNumberFormatter(Formatter):
 
     >>> format_timedelta = FancyNumberFormatter(structure=(
     ... #   limit    base  format
-    ... (10**3,10**-6, (u'%(value)d microseconds'                      , {'value': 1})),
-    ... (10**3, 10**3, (u'%(value).2f ms'                              , {'value': 1})),
-    ... (60   , 10**3, (u'%(value).2f s'                               , {'value': 1})),
-    ... (60   ,     1, (u'%(value_1)d m %(value_2)d s'                 , {'value_1': 60, 'value_2': 1})),
-    ... (24   ,    60, (u'%(value_1)d h %(value_2)d m'                 , {'value_1': 60, 'value_2': 1})),
-    ... (7    ,    60, (u'%(value_1)d wk %(value_2)d d %(value_3)d h'  , {'value_1': 7*24, 'value_2': 24, 'value_3': 1})),
-    ... (None ,  24*7, (u'%(value_1)d y %(value_2)d wk'                , {'value_1': 52, 'value_2': 1})),
+    ... (10**3,10**-6, ('%(value)d microseconds'                      , {'value': 1})),
+    ... (10**3, 10**3, ('%(value).2f ms'                              , {'value': 1})),
+    ... (60   , 10**3, ('%(value).2f s'                               , {'value': 1})),
+    ... (60   ,     1, ('%(value_1)d m %(value_2)d s'                 , {'value_1': 60, 'value_2': 1})),
+    ... (24   ,    60, ('%(value_1)d h %(value_2)d m'                 , {'value_1': 60, 'value_2': 1})),
+    ... (7    ,    60, ('%(value_1)d wk %(value_2)d d %(value_3)d h'  , {'value_1': 7*24, 'value_2': 24, 'value_3': 1})),
+    ... (None ,  24*7, ('%(value_1)d y %(value_2)d wk'                , {'value_1': 52, 'value_2': 1})),
     ... ))
-    >>> format_timedelta(0.08)
-    u'80.00 ms'
-    >>> format_timedelta(0.0008)
-    u'800 microseconds'
+    >>> assert format_timedelta(0.08)  == '80.00 ms'
+    >>> assert format_timedelta(0.0008)       == '800 microseconds'
 
     Exception
     ---------
@@ -778,42 +771,32 @@ class LogNumberFormatter(Formatter):
     Let's show this thru a simple byte formatter::
 
     >>> format_size = LogNumberFormatter(
-    ...   units=([u"B", u"KiB", u"MiB", u"GiB", u"TiB"], 2**10))
-    ... )
-    ...
+    ...   units=(["B", "KiB", "MiB", "GiB", "TiB"], 2**10))
 
     Notice that 2**10 == 1024 which is the base for the calcul in we
     want true Bytes::
 
-    >>> format_size(0)
-    (u'0', u'B')
-    >>> format_size(1024)
-    (u'1.0', u'KiB')
-    >>> format_size(1024**4)
-    (u'1.0', u'TiB')
-    >>> format_size(1024**4)
-    (u'1.0', u'TiB')
-    >>> format_size(1024**2.5)
-    (u'32.0', u'MiB')
+    >>> assert format_size(0)          == ('0', 'B')
+    >>> assert format_size(1024)       == ('1.0', 'KiB')
+    >>> assert format_size(1024**4)    == ('1.0', 'TiB')
+    >>> assert format_size(1024**4)    == ('1.0', 'TiB')
+    >>> assert format_size(1024**2.5)  == ('32.0', 'MiB')
 
     Precision
     ---------
 
     number after the period and rounding policies (to the nearest)
 
-    >>> format_size(1500) # 1500/1024 = 1.46
-    (u'1.5', u'KiB')
+    >>> assert format_size(1500) == ('1.5', 'KiB')  ## 1500/1024 = 1.46
 
     Note that :
 
-    >>> format_size(2047) # 1.999 KiB
-    (u'2.0', u'KiB')
+    >>> assert format_size(2047) == ('2.0', 'KiB')  ## 1.999 KiB
 
     Even with the default precision of 1, the size should not be
     written with a trailing ".0"
 
-    >>> format_size(35)
-    (u'35', u'B')
+    >>> assert format_size(35) == ('35', 'B')
 
     >>> format_size = LogNumberFormatter(
     ...   units=([u"B", u"KiB", u"MiB", u"GiB", u"TiB"], 2**10),
@@ -821,8 +804,7 @@ class LogNumberFormatter(Formatter):
     ...   )
     ...
 
-    >>> format_size(2366)
-    (u'2.311', u'KiB')
+    >>> assert format_size(2366) == ('2.311', 'KiB')
 
     Number over the scale
     ---------------------
@@ -832,11 +814,8 @@ class LogNumberFormatter(Formatter):
 
     >>> format_size = LogNumberFormatter(
     ...   units=([u"B", u"KiB", u"MiB", u"GiB", u"TiB"], 2**10))
-    ... )
-    ...
 
-    >>> format_size(1024**6)
-    (u'1048576.0', u'TiB')
+    >>> assert format_size(1024**6) == ('1048576.0', 'TiB')
 
     Internationalisation
     --------------------
@@ -846,13 +825,9 @@ class LogNumberFormatter(Formatter):
 
     >>> format_size = LogNumberFormatter(
     ...   units=([u"B", u"KB", u"MB", u"GB", u"TB"], 10**3))
-    ... )
-    ...
 
-    >>> format_size(5000)
-    (u'5.0', u'KB')
-    >>> format_size(234)
-    (u'234', u'B')
+    >>> assert format_size(5000) == ('5.0', 'KB')
+    >>> assert format_size(234) == ('234', 'B')
 
     Exceptions
     ----------
