@@ -27,6 +27,9 @@ def remove_ansi(s):
     return re.sub(r'\x1b[^m]*m', '', s)
 
 
+def remove_trailing_whitespaces(s):
+    return "\n".join(re.sub(r' +$', '', l) for l in s.split("\n"))
+
 ##
 ## Format list of records
 ##
@@ -38,23 +41,23 @@ def records(elts, fields=None, group_by=[], order_by=[], indent="",
 
     >>> elts = [{"foo": 1, "bar": 'x'},
     ...            {"foo": 23, "bar": 'abc'}]
-    >>> print(text_table(elts, fields=['foo', 'bar']))
+    >>> print(records(elts, fields=['foo', 'bar']))
     1  x
     23 abc
 
-    >>> print(text_table(elts, fields=['bar', ], group_by=['foo', ]))
+    >>> print(records(elts, fields=['bar', ], group_by=['foo', ]))
     foo: 1
       x
     foo: 23
       abc
-    >>> print(text_table(elts, fields=['foo', 'bar'], group_by=['foo', 'bar']))
+    >>> print(records(elts, fields=['foo', 'bar'], group_by=['foo', 'bar']))
     foo: 1
       bar: x
         1 x
     foo: 23
       bar: abc
         23 abc
-    >>> print(text_table(elts, fields=['bar', 'foo', ], totals={'foo': sum}))
+    >>> print(records(elts, fields=['bar', 'foo', ], totals={'foo': sum}))
     x   1
     abc 23
     ------
@@ -100,9 +103,10 @@ def records(elts, fields=None, group_by=[], order_by=[], indent="",
                              totals[f]([r[f] for r in elts]))
                             for f in fields)
         total = [bar, fmt_record_line(record_total)]
-    return ("%s" % indent) + \
-           ("\n%s" % indent).join([fmt_record_line(r).strip()
-                                   for r in elts] + total)
+    return remove_trailing_whitespaces(
+        ("%s" % indent) + \
+        ("\n%s" % indent).join([fmt_record_line(r)
+                                for r in elts] + total))
 
 
 ##
