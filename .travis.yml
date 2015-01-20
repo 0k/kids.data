@@ -8,7 +8,7 @@ install:
   - pip install coverage coveralls
 script:
   - git reset --hard HEAD ; git clean -d -f ; python setup.py sdist --formats=gztar && pip install "dist/$(./autogen.sh --get-name)-$(./autogen.sh --get-version | tr "_" "-").tar.gz" --upgrade
-  - nosetests -vv --collect-only
+  - pip uninstall -y "$(./autogen.sh --get-name)"
   - nosetests --collect-only --first-package-wins
   - nosetests --collect-only -P
   - nosetests -vv --collect-only | grep skipped
