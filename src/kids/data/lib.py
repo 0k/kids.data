@@ -10,8 +10,10 @@ def partition(elts, f):
         res[r].append(e)
     return res
 
+Null = object()
 
-def first(elts, predicate):
+
+def first(elts, predicate, default=Null):
     """Returns the first elt of elts that matches predicate
 
         >>> first([3, 7, 11, 15, 33], predicate=lambda x: x % 11 == 0)
@@ -25,9 +27,16 @@ def first(elts, predicate):
         ...
         ValueError: No value matches predicate
 
+    We can also set a default value in case of no match::
+
+        >>> first([3, 7, 11, 15, 33], predicate=lambda x: x % 13 == 0, 0)
+        0
 
     """
     for elt in elts:
         if predicate(elt):
             return elt
-    raise ValueError("No value matches predicate")
+    if default is Null:
+        raise ValueError("No value matches predicate")
+    else:
+        return default
