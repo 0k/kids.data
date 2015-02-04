@@ -1,7 +1,6 @@
-========
+=========================
 kids.data
-========
-
+=========================
 
 .. image:: http://img.shields.io/pypi/v/kids.data.svg?style=flat
    :target: https://pypi.python.org/pypi/kids.data/
@@ -21,9 +20,8 @@ kids.data
 
 
 ``kids.data`` is a Python library providing helpers to manage data.
-It's part of 'Kids' (for Keep It Dead Simple) library.
 
-It is, for now, a very humble package.
+It's part of 'Kids' (for Keep It Dead Simple) library.
 
 
 Maturity
@@ -46,28 +44,34 @@ using ``kids.data``:
 - a way to display tables of records on command line
 - some everyday missing function for manipulating sets of elements
 
-Compatibility
-=============
 
-This code is tested for compatibility with python 2.7 and python >= 3 .
+Installation
+============
+
+You don't need to download the GIT version of the code as ``kids.data`` is
+available on the PyPI. So you should be able to run::
+
+    pip install kids.data
+
+If you have downloaded the GIT sources, then you could add install
+the current version via traditional::
+
+    python setup.py install
+
+And if you don't have the GIT sources but would like to get the latest
+master or branch from github, you could also::
+
+    pip install git+https://github.com/0k/kids.data
+
+Or even select a specific revision (branch/tag/commit)::
+
+    pip install git+https://github.com/0k/kids.data@master
 
 
-Documentation
-=============
-
-It's too early to offer a documentation for this package.
-
-
-
-
-Tests
+Usage
 =====
 
-Well, this package is really small, and you've just read the tests.
-
-To execute them, install ``nosetest``, and run::
-
-    nosetests
+TBD
 
 
 Contributing
