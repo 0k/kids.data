@@ -1,14 +1,35 @@
 # -*- coding: utf-8 -*-
 
 
-def partition(elts, f):
-    res = {}
-    for e in elts:
-        r = f(e)
-        if r not in res:
-            res[r] = []
-        res[r].append(e)
-    return res
+def partition(elts, predicate):
+    """Splits elts depending on their result.
+
+    Partitions set of elts. Result of the predicate must be hashable.
+
+        >>> partition("qweryuop ", lambda x: "How are you ?".count(x))
+        {0: ['q', 'p'], 1: ['w', 'e', 'r', 'y', 'u'], 2: ['o'], 3: [' ']}
+
+    """
+    heaps = {}
+    for elt in elts:
+        key = predicate(elt)
+        heaps[key] = heaps.get(key, []) + [elt]
+    return heaps
+
+
+def half_split_on_predicate(elts, predicate):
+    """Splits elts in two thanks to a predicate function.
+
+    Partitions set of elts. Result of the predicate must be boolean.
+
+        >>> half_split_on_predicate("qweryuop ", lambda x: x in "How are you ?")
+        (['q', 'p'], ['w', 'e', 'r', 'y', 'u', 'o', ' '])
+
+    """
+
+    heaps = partition(elts, predicate)
+    return heaps.get(False, []), heaps.get(True, [])
+
 
 Null = object()
 
