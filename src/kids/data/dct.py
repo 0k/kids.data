@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import copy
 from itertools import chain
 
 
@@ -10,3 +11,6 @@ def merge(*args):
 
     """
     return dict(chain(*[d.items() for d in args]))
+
+
+deep_copy = copy.deepcopy
