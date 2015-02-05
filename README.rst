@@ -127,6 +127,52 @@ If you just want to use it once on a nested dict, all the function are ready for
     {'a': {}, 'x': 1}
 
 
+graph
+-----
+
+``graph`` provide a bunch of function to work with graph. In a
+agnostic way, this means you can store your graph in whatever the form
+you want. All you need to do it to provide a function to get the
+related nodes from their related nodes.
+
+Example with the ``cycle_exists`` function::
+
+    >>> from kids.data.graph import cycle_exists
+
+    >>> graph = {1: [2, 3], 2: [1]}
+    >>> get_children = lambda n: graph.get(n, [])
+
+    >>> cycle_exists(1, get_children)
+    True
+
+    >>> cycle_exists(3, get_children)
+    False
+
+As node ``3`` is a leaf there are no cycle starting from him.
+
+You could get the ``leafage`` of a set of elements (a leaf is a final
+node without children). The ``leafage`` is all the ``leaf`` that can
+be reached from given elements::
+
+    >>> from kids.data.graph import leafage
+
+    >>> list(leafage([1, 4], get_children))
+    [3, 4]
+
+The nice one is ``reorder``, which will try to do the minimum change
+to a given list, but will swap element to garanty no dependency
+issues, this means that the children will appear before the
+parents. This is very handy when loading modules that depends to
+other modules::
+
+    >>> from kids.data.graph import reorder
+
+    >>> graph = {2: [1], 3: [2]}
+    >>> reorder([1, 3, 2], get_children)
+    [1, 2, 3]
+
+
+
 Contributing
 ============
 

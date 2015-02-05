@@ -50,7 +50,8 @@ def first(elts, predicate, default=Null):
 
     We can also set a default value in case of no match::
 
-        >>> first([3, 7, 11, 15, 33], predicate=lambda x: x % 13 == 0, 0)
+        >>> first([3, 7, 11, 15, 33], predicate=lambda x: x % 13 == 0,
+        ...       default=0)
         0
 
     """
