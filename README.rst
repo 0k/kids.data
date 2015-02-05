@@ -71,7 +71,60 @@ Or even select a specific revision (branch/tag/commit)::
 Usage
 =====
 
-TBD
+
+mdict
+-----
+
+``mdict`` are nested dicts access in one go thanks to interpreting the key,
+check this::
+
+    >>> from pprint import pprint as pp
+    >>> from kids.data.mdict import mdict
+
+    >>> d = mdict({'a': {'b': {'y': 0}}, 'x': 1})
+    >>> d['a.b.y']
+    0
+    >>> d.get('a.b.z', 3)
+    3
+    >>> d['a.b']
+    m{'y': 0}
+
+You can configure your mdict to use '/' instead, and if you want more you could
+build your own key tokenizer to break your string into token::
+
+    >>> from kids.data.mdict import mk_char_tokenizer
+
+    >>> d = mdict({'a': {'b': {'y': 0}}, 'x': 1}, mk_char_tokenizer('/'))
+    >>> d['a/b/y']
+    0
+
+Of course setting item works the same::
+
+    >>> d['a/b/z'] = 2
+    >>> d
+    m{'a': {'b': {'y': 0, 'z': 2}}, 'x': 1}
+
+And deleting items::
+
+    >>> del d['a/b']
+    >>> d
+    m{'a': {}, 'x': 1}
+
+
+If you just want to use it once on a nested dict, all the function are ready for use::
+
+    >>> from kids.data.mdict import mset, mget, mdel
+
+    >>> dct = {'a': {'b': {'y': 0}}, 'x': 1}
+    >>> mget(dct, 'a.b.y')
+    0
+    >>> mset(dct, 'a.b.z', 2)
+    >>> pp(dct)
+    {'a': {'b': {'y': 0, 'z': 2}}, 'x': 1}
+
+    >>> mdel(dct, 'a.b')
+    >>> pp(dct)
+    {'a': {}, 'x': 1}
 
 
 Contributing
