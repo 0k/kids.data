@@ -39,6 +39,7 @@ Features
 ========
 
 using ``kids.data``:
+
 - You'll have a matching library to fuzzy match elements
 - a formatter concept to help you format any type of data to another type
 - a way to display tables of records on command line
