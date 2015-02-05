@@ -173,6 +173,22 @@ other modules::
     [1, 2, 3]
 
 
+dct
+---
+
+Merging dicts is something that should be in base python and is missing a lot of 
+people (see this `stackoverflow question about merging dict non-inplace`_).
+
+.. _stackoverflow question about merging dict non-inplace: http://stackoverflow.com/q/38987
+
+You can use ``merge`` to merge several dicts into one::
+
+     >>> from pprint import pprint
+     >>> from kids.data.dct import merge
+
+     >>> pp(merge({'a': 1}, {'a': 2, 'b': 1}, {'c': 3}))
+     {'a': 2, 'b': 1, 'c': 3}
+
 
 Contributing
 ============
