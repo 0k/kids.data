@@ -2,8 +2,371 @@
 
 import re
 import pprint
+import collections
 
 from kids.cache import cache
+
+
+def mk_solid_split(split_char=".", quote_char="\\"):
+    r"""Split string with escaping capabilities
+
+        >>> ssplit = mk_solid_split()
+
+    The classical usage is without surprises::
+
+        >>> ssplit('abc')
+        'abc'
+        >>> ssplit('a.bc')
+        ('a', 'bc')
+        >>> ssplit('a.b.c')
+        ('a', 'b.c')
+
+    Notice that final string or key gets unquoted, but not values::
+
+        >>> assert ssplit(r'a\.bc')  ==  r'a.bc'
+        >>> assert ssplit(r'a\\.bc') == ('a' + '\\', r'bc')
+        >>> ssplit(r'a\.b.c')
+        ('a.b', 'c')
+        >>> ssplit(r'a\.b.c\.d')
+        ('a.b', 'c\\.d')
+
+    Empty string can be keys::
+
+        >>> ssplit('.b.c')
+        ('', 'b.c')
+        >>> ssplit('')
+        ''
+
+    """
+
+    ## Current format::
+    ##   state_machine := (STATE0, STATE2, ...)
+    ##   STATEx := [(match_char, STATEy), ...]
+
+    ## On this state_machine::
+    ##   0 is normal and starting state
+    ##   1 is quoted,
+    ##   None is final state.
+
+    state_machine = ([(quote_char, 1),
+                      (split_char, None),
+                      (None, 0)],
+                     [(None, 0)])
+
+    def next_state(state, char):
+        for pattern, dest in state_machine[state]:
+            if pattern == char or pattern is None:
+                return dest
+        assert "Invalid State Machine"
+
+    def split(s):
+        state = 0
+        acc = []
+        for i, char in enumerate(s):
+            state = next_state(state, char)
+            if state is None:
+                return ''.join(acc), s[i + 1:]
+            if state == 0:
+                acc.append(char)
+        return ''.join(acc)
+    return split
+
+
+def mk_sep_fun(sep, strip=True, quote_char="\\"):
+    """Create a standard separator upon string keys
+
+    >>> f = mk_sep_fun(".")
+    >>> f(("a.b.c", 3))
+    ('a', ('b.c', 3), False)
+
+    >>> f(("a", 3))
+    ('a', 3, True)
+
+    """
+
+    ssplit = mk_solid_split(sep, quote_char)
+
+    def sep_fun(value, deep=-1):
+        """Return couple Head Key, Tail Value
+
+        If you want to classify elements, this function will have the
+        responsibility to return a head key string, and a possible
+        different tail value (elements may be transformed by
+        classification).
+
+        """
+        if deep == 0:
+            return value[0], value[1], True
+        splitted = ssplit(value[0])
+        if not isinstance(splitted, tuple):
+            return splitted, value[1], True
+        head, tail = splitted
+        return head, (tail, value[1]), False
+
+    return sep_fun
+
+
+def mk_join_fun(sep, quote_char="\\"):
+    r"""Create a standard join string keys with given sep
+
+        >>> f = mk_join_fun(".")
+        >>> f('a', ('b.c', 3), False)
+        ('a.b.c', 3)
+
+        >>> f('a', 3, True)
+        ('a', 3)
+
+        >>> f('a.b', 3, True)
+        ('a\\.b', 3)
+
+        >>> f('a.b', ('c', 3), False)
+        ('a\\.b.c', 3)
+
+    It's generating the perfect inverse of ``mk_sep_fun()``::
+
+        >>> sep, join = mk_sep_fun("/"), mk_join_fun("/")
+        >>> id1 = lambda *a: sep(join(*a))
+        >>> id2 = lambda *a: join(*sep(*a))
+        >>> id1('a', ('b/c', 3), False)
+        ('a', ('b/c', 3), False)
+        >>> id2(("a/b/c", 3))
+        ('a/b/c', 3)
+
+    And also with quoting enabled::
+
+        >>> assert id1('a.b', (r'c.d\\.e\.h', 3), False) == ('a.b', (r'c.d\\.e\.h', 3), False)
+
+        >>> id2((r'a.b\.c', 3))
+        ('a.b.c', 3)
+
+    Notice that we lost the \ before the point, because it is not important.
+
+        >>> id2((r'a/b\/c', 3))
+        ('a/b\\/c', 3)
+
+    And we didn't loose this one, as it is important.
+
+        >>> id2((r'a\/b/c', 3))
+        ('a\\/b/c', 3)
+
+        >>> assert id2((r'a\/b\\/c', 3)) == (r'a\/b\\/c', 3)
+
+    """
+
+    prepare = {
+        'sc': re.escape(sep),
+        'qc': re.escape(quote_char),
+    }
+
+    quote_chars = re.compile(r'(%(qc)s|%(sc)s)' % prepare)
+
+    def quote(s):
+        return quote_chars.sub(r'%(qc)s\1' % prepare, s)
+
+    def join_fun(key, value, final):
+        """Return the join key and value
+
+        if final is set, then
+        If you want to classify elements, this function will have the
+        responsibility to return a head key string, and a possible
+        different tail value (elements may be transformed by
+        classification).
+
+        """
+        if final:
+            return quote(key), value
+        return sep.join((quote(key), value[0])), value[1]
+
+    return join_fun
+
+
+def classify(values, sep_fun, deep=-1):
+    """Classify your values in a hierarchical dict
+
+        >>> def sep_fun(value, deep=-1):
+        ...     primes = [v for v in [2, 3, 5, 7] if value % v == 0]
+        ...     if len(primes) == 0:
+        ...         return None, value, True
+        ...     tailv = value / primes[0]
+        ...     return primes[0], int(tailv), tailv == 1
+        >>> classify([6, 9, 15, 20, 32], sep_fun)
+        {2: {2: {2: {2: {2: 1}}, 5: 1}, 3: 1}, 3: {3: 1, 5: 1}}
+
+    Note that we can classify all these numbers only because none
+    of them is multiple of another and ... Hum to complicated to
+    sum up, but this will make it crash::
+
+        >>> classify([6, 9, 15, 20, 2], sep_fun)
+        Traceback (most recent call last):
+        ...
+        TypeError: Previous key 2 ..., but we would like to set final 1 in it.
+
+    Depending on which order these are classified, the order could
+    be reversed::
+
+        >>> classify([2, 6, 9, 15, 20], sep_fun)
+        Traceback (most recent call last):
+        ...
+        TypeError: Previous key 2 ..., but we would like to set final 1 in it.
+
+
+    """
+
+    def mset(dct, value, sep_fun, deep=-1):
+        headk, tailv, final = sep_fun(value, deep)
+        if final:
+            if headk in dct:
+                raise TypeError(
+                    "Previous key %s was set to a subhierarchy"
+                    " value %r, but we would like to set final %r in it."
+                    % (headk, dct[headk], tailv))
+
+            dct[headk] = tailv
+        else:
+            if headk not in dct:
+                dct[headk] = {}
+            if not isinstance(dct[headk], dict):
+                raise TypeError(
+                    "Previous key %s was set to a final"
+                    " value %r, but we would like to classify %r in it."
+                    % (headk, dct[headk], tailv))
+            mset(dct[headk], tailv,
+                 sep_fun=sep_fun,
+                 deep=-1 if deep < 0 else deep - 1)
+
+    res = {}
+    for value in values:
+        mset(res, value, sep_fun, deep)
+    return res
+
+
+def unclassify(dct, join_fun, deep=-1):
+    """Returns all values precedently classified in dict
+
+        >>> def join_fun(key, value, _final):
+        ...     return key * value
+
+        >>> from pprint import pprint as pp
+        >>> pp(sorted(unclassify(
+        ...     {2: {2: {2: {2: {2: 1}}, 5: 1}, 3: 1}, 3: {3: 1, 5: 1}},
+        ...     join_fun)))
+        [6, 9, 15, 20, 32]
+
+    """
+    for k, v in dct.items():
+        if isinstance(v, dict) and (deep > 0 or deep == -1):
+            for v2 in unclassify(v, join_fun,
+                                 deep=-1 if deep < 0 else deep - 1):
+                yield join_fun(k, v2, False)
+        else:
+            yield join_fun(k, v, True)
+
+
+def inflate(dct, sep=".", deep=-1):
+    """Inflates a flattened dict.
+
+    Will look in simple dict of string key with string values to
+    create a dict containing sub dicts as values.
+
+    Samples are better than explanation:
+
+        >>> from pprint import pprint as pp
+        >>> pp(inflate({'a.x': 3, 'a.y': 2}))
+        {'a': {'x': 3, 'y': 2}}
+
+    The keyword argument ``sep`` allows to change the separator used
+    to get subpart of keys:
+
+        >>> pp(inflate({'etc/group': 'geek', 'etc/user': 'bob'}, "/"))
+        {'etc': {'group': 'geek', 'user': 'bob'}}
+
+    Warning: you cannot associate a value to a section:
+
+        >>> inflate({'section.key': 3, 'section': 'bad'})
+        Traceback (most recent call last):
+        ...
+        TypeError: ...
+
+    Of course, dict containing only keys that doesn't use separator will be
+    returned without changes:
+
+        >>> inflate({})
+        {}
+        >>> inflate({'a': 1})
+        {'a': 1}
+
+    Argument ``deep``, is the level of deepness allowed to inflate dict:
+
+        >>> pp(inflate({'a.b.c': 3, 'a.d': 4}, deep=1))
+        {'a': {'b.c': 3, 'd': 4}}
+
+    Of course, a deepness of 0 won't do anychanges, whereas deepness of -1 is
+    the default value and means infinite deepness:
+
+        >>> pp(inflate({'a.b.c': 3, 'a.d': 4}, deep=0))
+        {'a.b.c': 3, 'a.d': 4}
+
+    """
+    return classify(dct.items(), sep_fun=mk_sep_fun(sep), deep=deep)
+
+
+def deflate(dct, sep=".", deep=-1):
+    """Flattens a recursive dict
+
+    This will create a flat dict (with no subdict) from dict structure::
+
+        >>> import pprint
+        >>> pprint.pprint(deflate({'a': {'b': 1, 'c': 2}, 'd': 3}))
+        {'a.b': 1, 'a.c': 2, 'd': 3}
+
+    With the ``deep`` argument, you can stop the deflateing to a
+    specified deepness::
+
+        >>> pprint.pprint(deflate({'a': {'b': 1, 'c': {'x': 9}}, 'd': 3},
+        ...               deep=1))
+        {'a.b': 1, 'a.c': {'x': 9}, 'd': 3}
+
+    """
+    return dict(unclassify(dct, join_fun=mk_join_fun(sep), deep=deep))
+
+
+flatten = deflate
+
+
+def mk_tokenize_from_sep_fun(sep):
+    """Return a tokenizer from a sep function
+
+    >>> sep_fun = mk_sep_fun(".")
+    >>> tokenize = mk_tokenize_from_sep_fun(sep_fun)
+    >>> list(tokenize('a.b.c'))
+    ['a', 'b', 'c']
+
+    """
+
+    def tokenizing(s):
+        """Returns an iterable through all subtoken
+
+        """
+        def _rec(s):
+            head, tail, final = sep(s)
+            yield head
+            if final:
+                yield tail
+            else:
+                for e in _rec(tail):
+                    yield e
+        for e in _rec(s):
+            yield e
+
+    End = object()
+
+    def tokenize(s):
+        for token in tokenizing((s, End)):
+            if token is End:
+                raise StopIteration
+            yield token
+
+    return tokenize
 
 
 @cache
@@ -24,9 +387,10 @@ def mk_char_tokenizer(split_char, quote_char='\\'):
 
     So dot of slashes can be contained in token:
 
-        >>> print('\n'.join(tokenize(r'foo.dot<\.>.slash<\\>')))
+        >>> print('\n'.join(tokenize(r'foo.dot<\.>.slash<\\>.slash<\\>')))
         foo
         dot<.>
+        slash<\>
         slash<\>
 
     Notice that empty keys are also supported:
@@ -39,37 +403,15 @@ def mk_char_tokenizer(split_char, quote_char='\\'):
         >>> list(tokenize(r''))
         ['']
 
-    And a None value:
+    # And a None value:
 
-        >>> list(tokenize(None))
-        []
+    #     >>> list(tokenize(None))
+    #     []
 
 
     """
-
-    prepare = {
-        'sc': re.escape(split_char),
-        'qc': re.escape(quote_char),
-    }
-
-    remove_quotes = re.compile(r'%(qc)s(%(qc)s|%(sc)s)' % prepare)
-    find_tokens = re.compile(r'((%(qc)s.|[^%(sc)s%(qc)s])*)' % prepare)
-
-    def tokenize(s):
-        """Returns an iterable through all subparts of string splitted by char
-
-        """
-        if s is None:
-            raise StopIteration
-        tokens = (remove_quotes.sub(r'\1', m.group(0))
-                  for m in find_tokens.finditer(s))
-        ## an empty string superfluous token is added after all non-empty token
-        for token in tokens:
-            if len(token) != 0:
-                next(tokens)
-            yield token
-
-    return tokenize
+    return mk_tokenize_from_sep_fun(
+        mk_sep_fun(split_char, quote_char=quote_char))
 
 
 def mget(dct, key, tokenize=mk_char_tokenizer(".")):
@@ -103,6 +445,7 @@ def mget(dct, key, tokenize=mk_char_tokenizer(".")):
         >>> dct = {'a': {'x': 1}, 'a.x': 3, 'a.y': 4}
         >>> mget(dct, 'a.x')
         1
+
         >>> mget(dct, r'a\.x')
         3
         >>> mget(dct, r'a.y')  ## doctest: +IGNORE_EXCEPTION_DETAIL
@@ -145,10 +488,10 @@ def mget(dct, key, tokenize=mk_char_tokenizer(".")):
         ...
         NonDictLikeTypeError: can't query subvalue 'y' of a leaf...
 
-    if the key is None, the whole dct should be sent back:
+    # if the key is None, the whole dct should be sent back:
 
-        >>> mget({'a': 1}, None)
-        {'a': 1}
+    #     >>> mget({'a': 1}, None)
+    #     {'a': 1}
 
     """
     return aget(dct, tokenize(key))
@@ -229,28 +572,6 @@ def aget(dct, key):
     return aget(value, key)
 
 
-# def mget(dct, key=None, default=None, create=False):
-#     if key is None:
-#         return dct
-#     if "." not in key:
-#         if key not in dct:
-#             if create:
-#                 dct[key] = {}
-#             else:
-#                 return default
-#         return dct[key]
-
-#     head, tail = key.split('.', 1)
-#     if head not in dct:
-#         if create:
-#             dct[head] = {}
-#         elif default:
-#             return default
-#         else:
-#             raise ValueError("No subsection %r defined." % head)
-#     return mget(dct[head], tail, default, create)
-
-
 Null = object()
 
 
@@ -305,6 +626,29 @@ def mset(dct, key, value, tokenize=mk_char_tokenizer(".")):
     dct[token] = value
 
 
+    # def mset(dct, value, sep_fun, deep=-1):
+    #     headk, tailv, final = sep_fun(value, deep)
+    #     if final:
+    #         if headk in dct:
+    #             raise TypeError(
+    #                 "Previous key %s was set to a subhierarchy"
+    #                 " value %r, but we would like to set final %r in it."
+    #                 % (headk, dct[headk], tailv))
+
+    #         dct[headk] = tailv
+    #     else:
+    #         if headk not in dct:
+    #             dct[headk] = {}
+    #         if not isinstance(dct[headk], dict):
+    #             raise TypeError(
+    #                 "Previous key %s was set to a final"
+    #                 " value %r, but we would like to classify %r in it."
+    #                 % (headk, dct[headk], tailv))
+    #         mset(dct[headk], tailv,
+    #              sep_fun=sep_fun,
+    #              deep=-1 if deep < 0 else deep - 1)
+
+
 def mdel(dct, key, tokenize=mk_char_tokenizer(".")):
     """delete a value in multiple depth dict
 
@@ -344,6 +688,15 @@ def mdel(dct, key, tokenize=mk_char_tokenizer(".")):
     del dct[token]
 
 
+Tokenizer = collections.namedtuple('Tokenizer', ["split", "join"])
+
+
+def mkCharTokenizer(sep, quote_char="\\"):
+    return Tokenizer(
+        mk_sep_fun(sep, quote_char),
+        mk_join_fun(sep, quote_char))
+
+
 class mdict(object):
     """Returns a mdict from a dict-like
 
@@ -352,7 +705,7 @@ class mdict(object):
 
         >>> d = mdict(
         ...     {'a': {'b': {'y': 0}}, 'x': 1},
-        ...     tokenize=mk_char_tokenizer('/'))
+        ...     tokenizer=mkCharTokenizer('/'))
 
     And use normal get/getitem::
 
@@ -386,11 +739,40 @@ class mdict(object):
         >>> d
         m{'a': {}, 'x': 1}
 
+    It supports also the ``.items()`` method:
+
+        >>> list(d.items())
+        [('x', 1)]
+
+    Notice how 'a' has disappeared as it is an empty section.
+
+    Which is a way to flatten the mdict:
+
+        >>> d = mdict(
+        ...     {'a': {'b': {'y': 0}}, 'x': 1},
+        ...     tokenizer=mkCharTokenizer('/'))
+        >>> sorted(d.items())
+        [('a/b/y', 0),
+         ('x', 1)]
+
+    So you can use it to update a real dict:
+
+        >>> from pprint import pprint as pp
+        >>> xx = {}
+        >>> xx.update(d)
+        >>> pp(xx)
+        {'a/b/y': 0, 'x': 1}
+
     """
 
-    def __init__(self, dct, tokenize=mk_char_tokenizer(".")):
+    def __init__(self, dct, tokenizer=mkCharTokenizer(".")):
         self.dct = dict(dct)
-        self.tokenize = tokenize
+        self.tokenizer = tokenizer
+
+    @cache
+    @property
+    def tokenize(self):
+        return mk_tokenize_from_sep_fun(self.tokenizer.split)
 
     def get(self, label, default=None):
         try:
@@ -401,7 +783,7 @@ class mdict(object):
     def __getitem__(self, label):
         res = mget(self.dct, label, tokenize=self.tokenize)
         if isinstance(res, dict):
-            res = mdict(res)
+            res = mdict(res, tokenizer=self.tokenizer)
         return res
 
     def __setitem__(self, label, value):
@@ -412,3 +794,9 @@ class mdict(object):
 
     def __delitem__(self, key):
         mdel(self.dct, key, tokenize=self.tokenize)
+
+    def items(self):
+        return self.__iter__()
+
+    def __iter__(self):
+        return unclassify(self.dct, join_fun=self.tokenizer.join)

@@ -93,9 +93,9 @@ check this::
 You can configure your mdict to use '/' instead, and if you want more you could
 build your own key tokenizer to break your string into token::
 
-    >>> from kids.data.mdict import mk_char_tokenizer
+    >>> from kids.data.mdict import mkCharTokenizer
 
-    >>> d = mdict({'a': {'b': {'y': 0}}, 'x': 1}, mk_char_tokenizer('/'))
+    >>> d = mdict({'a': {'b': {'y': 0}}, 'x': 1}, mkCharTokenizer('/'))
     >>> d['a/b/y']
     0
 
@@ -111,8 +111,20 @@ And deleting items::
     >>> d
     m{'a': {}, 'x': 1}
 
+Please note that the tokenizer is quite stable even with backslashed
+or empty keys::
 
-If you just want to use it once on a nested dict, all the function are ready for use::
+    >>> d[r'a/b\/c//d'] = 9
+    >>> d
+    m{'a': {'b/c': {'': {'d': 9}}}, 'x': 1}
+
+And flattening back the key/values is done through ``items()``::
+
+    >>> sorted(d.items())
+    [('a/b\\/c//d', 9), ('x', 1)]
+
+If you just want to use it once on a nested dict, all the function are
+ready for use::
 
     >>> from kids.data.mdict import mset, mget, mdel
 
