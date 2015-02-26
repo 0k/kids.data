@@ -48,4 +48,22 @@ class DictLikeAbstract(object):
 
     def __len__(self):
         return len(self.keys())
+
+
+class AttrDictAbstract(DictLikeAbstract):
+
+    def __getattr__(self, label):
+        if label.startswith("_"):
+            return super(AttrDictAbstract, self).__getattr__(label)
+        return self[label]
+
+    def __setattr__(self, label, value):
+        if label.startswith("_"):
+            return super(AttrDictAbstract, self).__setattr__(label, value)
+        return self.__setitem__(label, value)
+
+    def __delattr__(self, label):
+        if label.startswith("_"):
+            return super(AttrDictAbstract, self).__delattr__(label)
+        return self.__delitem__(label)
 deep_copy = copy.deepcopy
