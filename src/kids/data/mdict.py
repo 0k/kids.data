@@ -733,6 +733,10 @@ class mdict(object):
         >>> d
         m{'a': {'b': {'y': 0, 'z': 2}}, 'x': 1}
 
+    Or::
+
+        >>> d['a/b']['y'] = 9
+
     And deleting items::
 
         >>> del d['a/b']
