@@ -4,7 +4,7 @@ import re
 import pprint
 import collections
 
-from kids.cache import cache
+from kids.cache import cache, hippie_hashing
 
 
 def mk_solid_split(split_char=".", quote_char="\\"):
@@ -700,12 +700,12 @@ def mkCharTokenizer(sep, quote_char="\\"):
 class mdict(object):
     """Returns a mdict from a dict-like
 
+        >>> from pprint import pprint as pp
 
     So you can instanciate one::
 
-        >>> d = mdict(
-        ...     {'a': {'b': {'y': 0}}, 'x': 1},
-        ...     tokenizer=mkCharTokenizer('/'))
+        >>> dct = {'a': {'b': {'y': 0}}, 'x': 1}
+        >>> d = mdict(dct, tokenizer=mkCharTokenizer('/'))
 
     And use normal get/getitem::
 
@@ -737,11 +737,18 @@ class mdict(object):
 
         >>> d['a/b']['y'] = 9
 
+    And it will modify in place the original dct::
+
+        >>> pp(dct)
+        {'a': {'b': {'y': 9, 'z': 2}}, 'x': 1}
+
     And deleting items::
 
         >>> del d['a/b']
         >>> d
         m{'a': {}, 'x': 1}
+        >>> pp(dct)
+        {'a': {}, 'x': 1}
 
     It supports also the ``.items()`` method:
 
@@ -770,7 +777,7 @@ class mdict(object):
     """
 
     def __init__(self, dct, tokenizer=mkCharTokenizer(".")):
-        self.dct = dict(dct)
+        self.dct = dct
         self.tokenizer = tokenizer
 
     @cache
