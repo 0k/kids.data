@@ -367,6 +367,35 @@ def mk_tokenize_from_sep_fun(sep):
     return tokenize
 
 
+def mk_untokenize_from_join_fun(join):
+    r"""Return a untokenize function from a join function
+
+    >>> join_fun = mk_join_fun(".")
+    >>> untokenize = mk_untokenize_from_join_fun(join_fun)
+    >>> untokenize(['a', 'b', 'c'])
+    'a.b.c'
+
+    >>> untokenize(['a.x', 'b', 'c'])
+    'a\\.x.b.c'
+
+    """
+
+    End = object()
+
+    def untokenizing(tokens):
+        head, tail = tokens[0], tokens[1:]
+        if len(tail) == 0:
+            return join(head, End, True)
+        return join(head, untokenizing(tail), False)
+ 
+    def untokenize(tokens):
+        if len(tokens) == 0:
+            raise ValueError("Must provide at least one token to tokenize.")
+        return untokenizing(tokens)[0]
+
+    return untokenize
+
+
 @cache
 def mk_char_tokenizer(split_char, quote_char='\\'):
     r"""Returns a tokenizer for given char
@@ -791,6 +820,11 @@ class mdict(object):
     @property
     def tokenize(self):
         return mk_tokenize_from_sep_fun(self.tokenizer.split)
+
+    @cache
+    @property
+    def untokenize(self):
+        return mk_untokenize_from_join_fun(self.tokenizer.join)
 
     def get(self, label, default=None):
         try:
