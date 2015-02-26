@@ -750,29 +750,38 @@ class mdict(object):
         >>> pp(dct)
         {'a': {}, 'x': 1}
 
-    It supports also the ``.items()`` method:
+    It supports also the ``.items()`` method::
 
-        >>> list(d.items())
-        [('x', 1)]
+        >>> sorted(d.items())
+        [('a', m{}), ('x', 1)]
 
-    Notice how 'a' has disappeared as it is an empty section.
-
-    Which is a way to flatten the mdict:
+    It supports also ``.items()``::
 
         >>> d = mdict(
         ...     {'a': {'b': {'y': 0}}, 'x': 1},
         ...     tokenizer=mkCharTokenizer('/'))
         >>> sorted(d.items())
-        [('a/b/y', 0),
+        [('a', m{'b': {'y': 0}}),
          ('x', 1)]
 
-    So you can use it to update a real dict:
+    Flatten form
+    ------------
+
+    You can also ask for the flattened version of the mdict:
 
         >>> from pprint import pprint as pp
-        >>> xx = {}
-        >>> xx.update(d)
-        >>> pp(xx)
-        {'a/b/y': 0, 'x': 1}
+        >>> d = mdict(
+        ...     {'a': {'b': {'y': 0}}, 'x': 1},
+        ...     tokenizer=mkCharTokenizer('/'))
+        >>> pp(d.flat)
+        {'a/b/y': 0,
+         'x': 1}
+
+        >>> del d['a/b']
+        >>> pp(d.flat)
+        {'x': 1}
+
+    Notice how 'a' has disappeared as it is an empty section.
 
     """
 
@@ -806,8 +815,16 @@ class mdict(object):
     def __delitem__(self, key):
         mdel(self.dct, key, tokenize=self.tokenize)
 
+    def keys(self):
+        return self.dct.keys()
+
     def items(self):
-        return self.__iter__()
+        return ((k, self[k]) for k in self.keys())
 
     def __iter__(self):
-        return unclassify(self.dct, join_fun=self.tokenizer.join)
+        return self.dct.__iter__()
+
+    @property
+    @cache(key=lambda s: hippie_hashing(s.dct))
+    def flat(self):
+        return dict(unclassify(self.dct, join_fun=self.tokenizer.join))

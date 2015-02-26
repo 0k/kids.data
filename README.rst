@@ -118,10 +118,10 @@ or empty keys::
     >>> d
     m{'a': {'b/c': {'': {'d': 9}}}, 'x': 1}
 
-And flattening back the key/values is done through ``items()``::
+And flattening back the key/values is done through ``flat`` property::
 
-    >>> sorted(d.items())
-    [('a/b\\/c//d', 9), ('x', 1)]
+    >>> pp(d.flat)
+    {'a/b\\/c//d': 9, 'x': 1}
 
 If you just want to use it once on a nested dict, all the function are
 ready for use::
