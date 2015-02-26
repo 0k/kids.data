@@ -344,9 +344,7 @@ def mk_tokenize_from_sep_fun(sep):
     """
 
     def tokenizing(s):
-        """Returns an iterable through all subtoken
-
-        """
+        """Returns an iterable through all subtoken"""
         def _rec(s):
             head, tail, final = sep(s)
             yield head
