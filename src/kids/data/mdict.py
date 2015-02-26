@@ -6,6 +6,8 @@ import collections
 
 from kids.cache import cache, hippie_hashing
 
+from .dct import DictLikeAbstract, is_dict_like
+
 
 def mk_solid_split(split_char=".", quote_char="\\"):
     r"""Split string with escaping capabilities
@@ -225,7 +227,7 @@ def classify(values, sep_fun, deep=-1):
         else:
             if headk not in dct:
                 dct[headk] = {}
-            if not isinstance(dct[headk], dict):
+            if not is_dict_like(dct[headk]):
                 raise TypeError(
                     "Previous key %s was set to a final"
                     " value %r, but we would like to classify %r in it."
@@ -254,7 +256,7 @@ def unclassify(dct, join_fun, deep=-1):
 
     """
     for k, v in dct.items():
-        if isinstance(v, dict) and (deep > 0 or deep == -1):
+        if is_dict_like(v) and (deep > 0 or deep == -1):
             for v2 in unclassify(v, join_fun,
                                  deep=-1 if deep < 0 else deep - 1):
                 yield join_fun(k, v2, False)
@@ -724,7 +726,7 @@ def mkCharTokenizer(sep, quote_char="\\"):
         mk_join_fun(sep, quote_char))
 
 
-class mdict(object):
+class mdict(DictLikeAbstract):
     """Returns a mdict from a dict-like
 
         >>> from pprint import pprint as pp
@@ -791,6 +793,11 @@ class mdict(object):
         [('a', m{'b': {'y': 0}}),
          ('x', 1)]
 
+    And ``len``:
+
+        >>> len(d)
+        2
+
     Flatten form
     ------------
 
@@ -826,12 +833,6 @@ class mdict(object):
     def untokenize(self):
         return mk_untokenize_from_join_fun(self.tokenizer.join)
 
-    def get(self, label, default=None):
-        try:
-            return self[label]
-        except MissingKeyError:
-            return default
-
     def __getitem__(self, label):
         res = mget(self.dct, label, tokenize=self.tokenize)
         if isinstance(res, dict):
@@ -846,12 +847,6 @@ class mdict(object):
 
     def __delitem__(self, key):
         mdel(self.dct, key, tokenize=self.tokenize)
-
-    def keys(self):
-        return self.dct.keys()
-
-    def items(self):
-        return ((k, self[k]) for k in self.keys())
 
     def __iter__(self):
         return self.dct.__iter__()
