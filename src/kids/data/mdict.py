@@ -655,29 +655,6 @@ def mset(dct, key, value, tokenize=mk_char_tokenizer(".")):
     dct[token] = value
 
 
-    # def mset(dct, value, sep_fun, deep=-1):
-    #     headk, tailv, final = sep_fun(value, deep)
-    #     if final:
-    #         if headk in dct:
-    #             raise TypeError(
-    #                 "Previous key %s was set to a subhierarchy"
-    #                 " value %r, but we would like to set final %r in it."
-    #                 % (headk, dct[headk], tailv))
-
-    #         dct[headk] = tailv
-    #     else:
-    #         if headk not in dct:
-    #             dct[headk] = {}
-    #         if not isinstance(dct[headk], dict):
-    #             raise TypeError(
-    #                 "Previous key %s was set to a final"
-    #                 " value %r, but we would like to classify %r in it."
-    #                 % (headk, dct[headk], tailv))
-    #         mset(dct[headk], tailv,
-    #              sep_fun=sep_fun,
-    #              deep=-1 if deep < 0 else deep - 1)
-
-
 def mdel(dct, key, tokenize=mk_char_tokenizer(".")):
     """delete a value in multiple depth dict
 
