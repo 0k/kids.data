@@ -313,13 +313,18 @@ def inflate(dct, sep=".", deep=-1):
 
 
 def deflate(dct, sep=".", deep=-1):
-    """Flattens a recursive dict
+    r"""Flattens a recursive dict
 
     This will create a flat dict (with no subdict) from dict structure::
 
         >>> import pprint
         >>> pprint.pprint(deflate({'a': {'b': 1, 'c': 2}, 'd': 3}))
         {'a.b': 1, 'a.c': 2, 'd': 3}
+
+    Quoting any separator char found in the keys::
+
+        >>> pprint.pprint(deflate({'a.b': {'c': 1}}))
+        {'a\\.b.c': 1}
 
     With the ``deep`` argument, you can stop the deflateing to a
     specified deepness::
