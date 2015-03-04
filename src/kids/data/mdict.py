@@ -735,7 +735,7 @@ class CharTokenizer(object):
 
 
 class mdict(DictLikeAbstract):
-    """Returns a mdict from a dict-like
+    r"""Returns a mdict from a dict-like
 
         >>> from pprint import pprint as pp
 
@@ -806,6 +806,22 @@ class mdict(DictLikeAbstract):
         >>> len(d)
         2
 
+
+    Quoting
+    -------
+
+    If your original keys happens to hold the separator char, any keys
+    will appears with the quoted char::
+
+       >>> d = mdict({'8.8.8.8': 'google'})
+       >>> sorted(d.items())
+       [('8\\.8\\.8\\.8', 'google')]
+
+       >>> d = mdict({'a.b': {'c': 'google'}})
+       >>> sorted(d.keys())
+       ['a\\.b']
+
+
     Flatten form
     ------------
 
@@ -847,7 +863,8 @@ class mdict(DictLikeAbstract):
         mdel(self.dct, key, tokenize=self.tokenizer.tokenize)
 
     def __iter__(self):
-        return self.dct.__iter__()
+        for k in self.dct.__iter__():
+            yield self.tokenizer.quote(k)
 
     @property
     @cache(key=lambda s: hippie_hashing(s.dct))
