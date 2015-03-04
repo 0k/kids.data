@@ -93,9 +93,9 @@ check this::
 You can configure your mdict to use '/' instead, and if you want more you could
 build your own key tokenizer to break your string into token::
 
-    >>> from kids.data.mdict import mkCharTokenizer
+    >>> from kids.data.mdict import CharTokenizer
 
-    >>> d = mdict({'a': {'b': {'y': 0}}, 'x': 1}, mkCharTokenizer('/'))
+    >>> d = mdict({'a': {'b': {'y': 0}}, 'x': 1}, CharTokenizer('/'))
     >>> d['a/b/y']
     0
 

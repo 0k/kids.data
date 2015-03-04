@@ -717,13 +717,44 @@ def mdel(dct, key, tokenize=mk_char_tokenizer(".")):
     del dct[token]
 
 
-Tokenizer = collections.namedtuple('Tokenizer', ["split", "join"])
+Tokenizer = collections.namedtuple(
+    'Tokenizer',
+    ["split", "join",
+     "quote", "unquote",
+     "tokenize", "untokenize"])
 
 
-def mkCharTokenizer(sep, quote_char="\\"):
-    return Tokenizer(
-        mk_sep_fun(sep, quote_char),
-        mk_join_fun(sep, quote_char))
+class CharTokenizer(object):
+
+    def __init__(self, sep, quote_char="\\"):
+        self.sep = sep
+        self.quote_char = quote_char
+
+    @cache
+    @property
+    def split(self):
+        return mk_sep_fun(self.sep, self.quote_char)
+
+    @cache
+    @property
+    def join(self):
+        return mk_join_fun(self.sep, self.quote_char)
+
+    @cache
+    @property
+    def tokenize(self):
+        return mk_tokenize_from_sep_fun(self.split)
+
+    @cache
+    @property
+    def untokenize(self):
+        return mk_untokenize_from_join_fun(self.join)
+
+    def quote(self, k):
+        return self.untokenize([k])
+
+    def unquote(self, k):
+        return self.tokenize(k).next()
 
 
 class mdict(DictLikeAbstract):
@@ -734,7 +765,7 @@ class mdict(DictLikeAbstract):
     So you can instanciate one::
 
         >>> dct = {'a': {'b': {'y': 0}}, 'x': 1}
-        >>> d = mdict(dct, tokenizer=mkCharTokenizer('/'))
+        >>> d = mdict(dct, tokenizer=CharTokenizer('/'))
 
     And use normal get/getitem::
 
@@ -788,7 +819,7 @@ class mdict(DictLikeAbstract):
 
         >>> d = mdict(
         ...     {'a': {'b': {'y': 0}}, 'x': 1},
-        ...     tokenizer=mkCharTokenizer('/'))
+        ...     tokenizer=CharTokenizer('/'))
         >>> sorted(d.items())
         [('a', m{'b': {'y': 0}}),
          ('x', 1)]
@@ -806,7 +837,7 @@ class mdict(DictLikeAbstract):
         >>> from pprint import pprint as pp
         >>> d = mdict(
         ...     {'a': {'b': {'y': 0}}, 'x': 1},
-        ...     tokenizer=mkCharTokenizer('/'))
+        ...     tokenizer=CharTokenizer('/'))
         >>> pp(d.flat)
         {'a/b/y': 0,
          'x': 1}
@@ -819,34 +850,24 @@ class mdict(DictLikeAbstract):
 
     """
 
-    def __init__(self, dct, tokenizer=mkCharTokenizer(".")):
+    def __init__(self, dct, tokenizer=CharTokenizer(".")):
         self.dct = dct
         self.tokenizer = tokenizer
 
-    @cache
-    @property
-    def tokenize(self):
-        return mk_tokenize_from_sep_fun(self.tokenizer.split)
-
-    @cache
-    @property
-    def untokenize(self):
-        return mk_untokenize_from_join_fun(self.tokenizer.join)
-
     def __getitem__(self, label):
-        res = mget(self.dct, label, tokenize=self.tokenize)
-        if isinstance(res, dict):
+        res = mget(self.dct, label, tokenize=self.tokenizer.tokenize)
+        if is_dict_like(res):
             res = mdict(res, tokenizer=self.tokenizer)
         return res
 
     def __setitem__(self, label, value):
-        return mset(self.dct, label, value, tokenize=self.tokenize)
+        return mset(self.dct, label, value, tokenize=self.tokenizer.tokenize)
 
     def __repr__(self):
         return 'm%s' % pprint.pformat(self.dct)
 
     def __delitem__(self, key):
-        mdel(self.dct, key, tokenize=self.tokenize)
+        mdel(self.dct, key, tokenize=self.tokenizer.tokenize)
 
     def __iter__(self):
         return self.dct.__iter__()
