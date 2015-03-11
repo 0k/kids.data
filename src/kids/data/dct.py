@@ -54,7 +54,11 @@ class AttrDictAbstract(DictLikeAbstract):
 
     def __getattr__(self, label):
         if label.startswith("_"):
-            return super(AttrDictAbstract, self).__getattr__(label)
+            sup = getattr(super(AttrDictAbstract, self), "__getattr__", None)
+            if sup:
+                return super(AttrDictAbstract, self).__getattr__(label)
+            raise AttributeError("No attribute %r found on %r."
+                                 % (label, self))
         return self[label]
 
     def __setattr__(self, label, value):
