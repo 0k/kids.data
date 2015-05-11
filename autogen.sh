@@ -98,7 +98,12 @@ get_current_version() {
         echo "$version"
     else
         version=$(echo "$version" | compat_sed "$get_short_tag")
-        echo "${version}.dev$(dev_version_tag)"
+
+        ## Python version packaging will consider various variation as pre-version.
+        ## and will consider .rev .p .post as post-version.
+        ## But package will be renamed to ``-postXXXXX``, and it'll complain if not
+        ## ``post``... so not so much choice here.
+        echo "${version}.post$(dev_version_tag)"
     fi
 
 }
@@ -111,13 +116,13 @@ prepare_files() {
 
     for file in $FILES; do
         if [ -e "$file" ]; then
-            compat_sed_i "s/%%version%%/$version/g;
-                          s/%%short-version%%/${short_version}/g;
-                          s/%%name%%/${NAME}/g;
-                          s/%%author%%/${AUTHOR}/g;
-                          s/%%email%%/${EMAIL}/g;
-                          s/%%author-email%%/${AUTHOR_EMAIL}/g;
-                          s/%%description%%/${DESCRIPTION}/g" \
+            compat_sed_i "s#%%version%%#$version#g;
+                          s#%%short-version%%#${short_version}#g;
+                          s#%%name%%#${NAME}#g;
+                          s#%%author%%#${AUTHOR}#g;
+                          s#%%email%%#${EMAIL}#g;
+                          s#%%author-email%%#${AUTHOR_EMAIL}#g;
+                          s#%%description%%#${DESCRIPTION}#g" \
                       "$file"
         fi
     done
